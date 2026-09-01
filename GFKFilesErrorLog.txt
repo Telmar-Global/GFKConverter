@@ -1,0 +1,3 @@
+Invalid or new station: 65535, not contained in gfkstats.dat
+Invalid or new station: 1, not contained in gfkstats.dat
+
