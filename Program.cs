@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
 using System.Windows.Forms;
 
 namespace GFKConverter
@@ -22,19 +22,22 @@ namespace GFKConverter
             }
             else
             {
-                // should be a single file
-                // will support multiple files
-                List<string > filesToProcess=new List<string>();
-                foreach(string fname in args)
+                DateTime date;
+                if (!DateTime.TryParseExact(args[0], "yyyyMMdd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out date))
                 {
-                    string fullname = fname;
-                    if (fname.Length < 13)
-                        fullname = System.IO.Path.Combine(Properties.Settings.Default.GFKFileDirectory, fname);
-                    filesToProcess.Add(fullname);
-
+                    Console.WriteLine("Invalid date: " + args[0] + ". Expected YYYYMMDD.");
+                    return -1;
                 }
-                return GFKBatchConverter.Convertfiles(filesToProcess,false );
 
+                List<string> filesToProcess;
+                if (!GFKConvert.TryGetFilesToProcessForDate(Properties.Settings.Default.GFKFileDirectory, date, out filesToProcess))
+                {
+                    Console.WriteLine("Date " + args[0] + " was not found in the available dates.");
+                    return -1;
+                }
+
+                return GFKBatchConverter.Convertfiles(filesToProcess, false);
             }
         }
     }

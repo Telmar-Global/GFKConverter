@@ -124,37 +124,93 @@ namespace GFKConverter
             return false;
         }
 
+        private static void CollectAvailableFiles(string directory, out List<string> fileNames, out List<DateTime> dates)
+        {
+            fileNames = new List<string>();
+            HashSet<DateTime> dateSet = new HashSet<DateTime>();
+            foreach (string path in Directory.GetFiles(directory, "*.*"))
+            {
+                string fileName = Path.GetFileName(path);
+                fileNames.Add(fileName);
+                DateTime fileDate;
+                if (TryGetFileDate(fileName, out fileDate))
+                    dateSet.Add(fileDate.Date);
+            }
+            dates = new List<DateTime>(dateSet);
+            dates.Sort();
+        }
+
+        public static bool TryGetFilesToProcessForDate(string gfkDirectory, DateTime date, out List<string> filesToProcess)
+        {
+            filesToProcess = new List<string>();
+            List<string> fileNames;
+            List<DateTime> dates;
+            CollectAvailableFiles(gfkDirectory, out fileNames, out dates);
+
+            string dateText = date.ToString("dd-MM-yyyy");
+            bool dateFound = false;
+            foreach (DateTime availableDate in dates)
+            {
+                if (availableDate.ToString("dd-MM-yyyy") == dateText)
+                {
+                    dateFound = true;
+                    break;
+                }
+            }
+            if (!dateFound)
+                return false;
+
+            foreach (string fileName in fileNames)
+            {
+                DateTime fileDate;
+                if (TryGetFileDate(fileName, out fileDate) && fileDate.Date == date.Date)
+                    filesToProcess.Add(Path.Combine(gfkDirectory, fileName));
+            }
+            return true;
+        }
+
         private void showAvailableFiles()
         {
             listFiles.Items.Clear();
             lbDates.Items.Clear();
             try
             {
-                HashSet<DateTime> dates = new HashSet<DateTime>();
-                foreach (string path in Directory.GetFiles(textGfkDir.Text, "*.*"))
-                {
-                    string fileName = Path.GetFileName(path);
+                List<string> fileNames;
+                List<DateTime> dates;
+                CollectAvailableFiles(textGfkDir.Text, out fileNames, out dates);
+                foreach (string fileName in fileNames)
                     listFiles.Items.Add(fileName);
-                    DateTime fileDate;
-                    if (TryGetFileDate(fileName, out fileDate))
-                        dates.Add(fileDate);
-                }
-                List<DateTime> sortedDates = new List<DateTime>(dates);
-                sortedDates.Sort();
-                foreach (DateTime date in sortedDates)
+                foreach (DateTime date in dates)
                     lbDates.Items.Add(date.ToString("dd-MM-yyyy"));
             }
             catch { }
         }
 
-        private void cmdProcessToIntermediate_Click(object sender, EventArgs e)
+        private void SelectFilesForDate(DateTime date)
         {
+            listFiles.ClearSelected();
+            for (int i = 0; i < listFiles.Items.Count; i++)
+            {
+                string listFileName = listFiles.Items[i].ToString();
+                DateTime fileDate;
+                if (TryGetFileDate(listFileName, out fileDate) && fileDate.Date == date.Date)
+                    listFiles.SetSelected(i, true);
+            }
+        }
 
+        private List<string> GetSelectedFilesToProcess()
+        {
             List<string> filesToProcess = new List<string>();
             foreach (string fileName in listFiles.SelectedItems)
             {
                 filesToProcess.Add(Path.Combine(textGfkDir.Text, fileName));
             }
+            return filesToProcess;
+        }
+
+        private void cmdProcessToIntermediate_Click(object sender, EventArgs e)
+        {
+            List<string> filesToProcess = GetSelectedFilesToProcess();
             GFKBatchConverter.Convertfiles(filesToProcess, true);
             showAvailableFiles();
             return;
@@ -202,14 +258,7 @@ namespace GFKConverter
             string julianDate = date.ToString("yy") + date.DayOfYear.ToString("000");
             txtInfo.Text = julianDate;
 
-            listFiles.ClearSelected();
-            for (int i = 0; i < listFiles.Items.Count; i++)
-            {
-                string listFileName = listFiles.Items[i].ToString();
-                DateTime fileDate;
-                if (TryGetFileDate(listFileName, out fileDate) && fileDate.Date == date.Date)
-                    listFiles.SetSelected(i, true);
-            }
+            SelectFilesForDate(date);
 
             string fileExtension = "0" + julianDate.Substring(0, 2);
             string fileName = "STAMDEF" + julianDate.Substring(julianDate.Length - 3) + "." + fileExtension;
