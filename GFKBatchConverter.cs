@@ -5,6 +5,8 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace GFKConverter
 {
@@ -32,7 +34,8 @@ namespace GFKConverter
                         gewFiles.Add(fullPath);
                     else if (fileName.StartsWith("PINAS", StringComparison.OrdinalIgnoreCase))
                         pinasFiles.Add(fullPath);
-                    else if (fileName.StartsWith("STAM", StringComparison.OrdinalIgnoreCase))
+                    else if (fileName.StartsWith("STAM", StringComparison.OrdinalIgnoreCase)
+                        && !fileName.StartsWith("STAMDEF", StringComparison.OrdinalIgnoreCase))
                         stamFiles.Add(fullPath);
                 }
 
@@ -48,10 +51,12 @@ namespace GFKConverter
 
                 if (gewFiles.Count > 0)
                     ConvertGFKWeights(gewFiles, gffDirectory);
-                if (pinasFiles.Count > 0)
-                    ConvertGFKViewing(pinasFiles, gffDirectory);
+
+                List<string> domesticids = new List<string>();
                 if (stamFiles.Count > 0)
-                    ConvertGFKDemos(stamFiles, gffDirectory);
+                    domesticids = ConvertGFKDemos(stamFiles, gffDirectory);
+                if (pinasFiles.Count > 0)
+                    ConvertGFKViewing(pinasFiles, gffDirectory, domesticids);
 
                 if (useGUI)
                     MessageBox.Show("Processing complete");
@@ -72,10 +77,11 @@ namespace GFKConverter
 
         private static void ConvertGFKWeights(List<string> gewFiles, string gffDirectory)
         {
-            string outputPath = Path.Combine(gffDirectory, "WEIGHT.DAT");
-            using (StreamWriter sw = new StreamWriter(outputPath))
+            foreach (string gewFile in gewFiles)
             {
-                foreach (string gewFile in gewFiles)
+                DateTime fileDate = ParseJulianFileDate(gewFile);
+                string outputPath = Path.Combine(gffDirectory, "W" + fileDate.ToString("yyyyMMdd") + ".DAT");
+                using (StreamWriter sw = new StreamWriter(outputPath))
                 {
                     string[] lines = File.ReadAllLines(gewFile);
                     for (int i = 1; i < lines.Length; i++)
@@ -99,12 +105,14 @@ namespace GFKConverter
             }
         }
 
-        private static void ConvertGFKViewing(List<string> pinasFiles, string gffDirectory)
+        private static void ConvertGFKViewing(List<string> pinasFiles, string gffDirectory, List<string> domesticids)
         {
-            string outputPath = Path.Combine(gffDirectory, "VIEWING.DAT");
-            using (StreamWriter sw = new StreamWriter(outputPath))
+            Dictionary<int, string> stationMap = ReadStationMap();
+            foreach (string pinasFile in pinasFiles)
             {
-                foreach (string pinasFile in pinasFiles)
+                DateTime fileDate = ParseJulianFileDate(pinasFile);
+                string outputPath = Path.Combine(gffDirectory, "V" + fileDate.ToString("yyyyMMdd") + ".DAT");
+                using (StreamWriter sw = new StreamWriter(outputPath))
                 {
                     string[] lines = File.ReadAllLines(pinasFile);
                     for (int i = 1; i < lines.Length; i++)
@@ -117,13 +125,71 @@ namespace GFKConverter
                         if (fields.Length < 1)
                             continue;
 
-                        DateTime date = ParseDate(fields[1].Trim());
+                        DateTime progdate = ParseDate(fields[1].Trim());
+                        DateTime usagedate = ParseDate(fields[2].Trim());
+                        bool hasplaybackdate = (fields[14].Trim() != "");
+
                         string HHID = fields[4].Trim().Replace("\"", "").PadLeft(8, '0');
-                        string station = fields[10].Trim().Replace("\"", "").PadLeft(4, '0');
+                        string stationRaw = fields[10].Trim().Replace("\"", "");
+                        string station = stationRaw.PadLeft(4, '0');
+                        if (station.Length > 4)
+                            station = station.Substring(station.Length - 4);
+                        int stationKey;
+                        string mappedStation;
+                        if (int.TryParse(stationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out stationKey)
+                            && stationMap.TryGetValue(stationKey, out mappedStation))
+                            station = mappedStation;
                         string starttime = fields[11].Trim().Replace("\"", "").PadLeft(8, '0');
                         starttime = starttime.Replace(":", "");
                         string duration = fields[12].Trim().Replace("\"", "").PadLeft(5, '0');
-                        sw.WriteLine(date.ToString("yyyyMMdd" + HHID + "001" + station + starttime + duration + "0000"));
+                        string outofhome = fields[19].Trim().Replace("\"", "");
+                        //Now some logic about the flags
+                        char[] viewflags = "0000000000000000".ToCharArray();
+                        // Flag 1 - Normal viewing on Broadcast station
+                        viewflags[0] = '1';
+                        // Flag 2 - Set if Guest
+                        if (outofhome != "0")
+                        {
+                            viewflags[1] = '1';
+                        }
+                        // Flag 3 - Set if Domestic worker
+                        if (domesticids.Contains(HHID))
+                        {
+                            viewflags[2] = '1';
+                        }
+                        // Time shidted viewing is when the record has a playback date.
+                        // Flag 4 - Set for normal viewing playbackdate = date
+                        if (hasplaybackdate)
+                        {
+                            // Viewed on same day as aired
+                            if (fields[1] == fields[2]) 
+                            {
+                                viewflags[3] = '1';
+                            }
+                            else
+                            {
+                                TimeSpan difference = usagedate - progdate;
+                                double totalDays = difference.TotalDays;
+                                // Flag 5 - Normal viewing + 1 = (( Playbackdate - Date ) <= 7 )
+                                if (totalDays <= 7)
+                                {
+                                    viewflags[4] = '1';
+                                }
+
+                                // Flag 6 - Normal viewing + 8 = (( Playbackdate - Date ) <= 27 )
+                                if ((totalDays > 7) && (totalDays <= 27))
+                                {
+                                    viewflags[5] = '1';
+                                }
+                            }
+                        }
+                            // Flag 13 - Set if non broadcast station
+                            string flags = new string(viewflags);
+
+
+                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + station + starttime + duration + "0000" + flags));
+                        // And one more for total viewing Station 0
+                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + "0000" + starttime + duration + "0000" + flags));
                     }
                 }
             }
@@ -136,18 +202,21 @@ namespace GFKConverter
             public int FlagPadding;
         }
 
-        private static void ConvertGFKDemos(List<string> stamFiles, string gffDirectory)
+        private static List<string> ConvertGFKDemos(List<string> stamFiles, string gffDirectory)
         {
+            List<string> domesticids = new List<string>();
             HashSet<DemoControlInfo> DemoControl = ReadDemoControl();
-            string outputPath = Path.Combine(gffDirectory, "DEMO.DAT");
-            using (StreamWriter sw = new StreamWriter(outputPath))
+            foreach (string stamFile in stamFiles)
             {
-                foreach (string stamFile in stamFiles)
+                int domesticRef = ReadDomesticWorkerRef(stamFile);
+                DateTime fileDate = ParseJulianFileDate(stamFile);
+                string[] lines = File.ReadAllLines(stamFile);
+                if (lines.Length == 0)
+                    continue;
+
+                string outputPath = Path.Combine(gffDirectory, "D" + fileDate.ToString("yyyyMMdd") + ".DAT");
+                using (StreamWriter sw = new StreamWriter(outputPath))
                 {
-                    DateTime fileDate = ParseJulianFileDate(stamFile);
-                    string[] lines = File.ReadAllLines(stamFile);
-                    if (lines.Length == 0)
-                        continue;
 
                     List<string> DemoHeadings = new List<string>();
                     string[] headingFields = lines[0].Split(';');
@@ -165,6 +234,17 @@ namespace GFKConverter
                             continue;
 
                         string firstItem = fields[0].Trim().Replace("\"", "").PadLeft(8, '0');
+                        if (fields.Length >= 23)
+                        {
+                            string column23 = fields[22].Trim().Replace("\"", "").Trim();
+                            int column23Value;
+                            if (int.TryParse(column23, NumberStyles.Integer, CultureInfo.InvariantCulture, out column23Value)
+                                && column23Value == domesticRef)
+                            {
+                                domesticids.Add(firstItem);
+                            }
+                        }
+
                         StringBuilder outputLine = new StringBuilder(fileDate.ToString("yyyyMMdd") + firstItem + "001");
                         for (int f = 1; f < fields.Length; f++)
                         {
@@ -185,6 +265,37 @@ namespace GFKConverter
                     }
                 }
             }
+            return domesticids;
+        }
+
+        private static Dictionary<int, string> ReadStationMap()
+        {
+            Dictionary<int, string> stationMap = new Dictionary<int, string>();
+            string path = Path.Combine(Properties.Settings.Default.MapFiles, "gfkstats.txt");
+            if (!File.Exists(path))
+                throw new FileNotFoundException("gfkstats.txt file not found in directory " + Properties.Settings.Default.MapFiles);
+
+            string[] lines = File.ReadAllLines(path);
+            foreach (string strline in lines)
+            {
+                string line = strline.Trim();
+                if (line.Length == 0)
+                    continue;
+
+                string[] fields = line.Split(';');
+                if (fields.Length < 2)
+                    continue;
+
+                int gfkStation;
+                if (!int.TryParse(fields[0].Trim().Replace("\"", ""), NumberStyles.Integer, CultureInfo.InvariantCulture, out gfkStation))
+                    continue;
+
+                string telmarStation = fields[1].Trim().Replace("\"", "").PadLeft(4, '0');
+                if (telmarStation.Length > 4)
+                    telmarStation = telmarStation.Substring(telmarStation.Length - 4);
+                stationMap[gfkStation] = telmarStation;
+            }
+            return stationMap;
         }
 
         private static HashSet<DemoControlInfo> ReadDemoControl()
@@ -233,6 +344,51 @@ namespace GFKConverter
                 sb.Append('0');
             for (int i = 0; i < flagPadding; i++)
                 sb[start + i] = padded[i];
+        }
+
+        private static int ReadDomesticWorkerRef(string stamFile)
+        {
+            string directory = Path.GetDirectoryName(stamFile);
+            string fileName = Path.GetFileName(stamFile);
+            string stamdefFileName;
+            if (fileName.StartsWith("STAMDEF", StringComparison.OrdinalIgnoreCase))
+            {
+                stamdefFileName = fileName;
+            }
+            else
+            {
+                int stamIndex = fileName.IndexOf("STAM", StringComparison.OrdinalIgnoreCase);
+                if (stamIndex < 0)
+                    throw new FormatException("STAM file name does not contain STAM: " + fileName);
+                stamdefFileName = fileName.Substring(0, stamIndex) + "STAMDEF" + fileName.Substring(stamIndex + 4);
+            }
+            string stamdefPath = Path.Combine(directory, stamdefFileName);
+            if (!File.Exists(stamdefPath))
+                throw new FileNotFoundException("STAMDEF file not found: " + stamdefPath);
+
+            string[] lines = File.ReadAllLines(stamdefPath);
+            foreach (string strline in lines)
+            {
+                string line = strline.Trim();
+                if (line.Length == 0)
+                    continue;
+
+                string[] fields = line.Split(';');
+                if (fields.Length < 7)
+                    continue;
+
+                string column7 = fields[6].Trim().Replace("\"", "").Trim();
+                if (column7.IndexOf("Domestic worker", StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+
+                string column6 = fields[5].Trim().Replace("\"", "").Trim();
+                int domesticRef;
+                if (!int.TryParse(column6, NumberStyles.Integer, CultureInfo.InvariantCulture, out domesticRef))
+                    throw new FormatException("Invalid Domestic worker value in STAMDEF file: " + column6);
+                return domesticRef;
+            }
+
+            throw new InvalidDataException("Domestic worker not found in STAMDEF file: " + stamdefPath);
         }
 
         private static DateTime ParseJulianFileDate(string filePath)

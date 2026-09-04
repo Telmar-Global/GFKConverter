@@ -202,6 +202,15 @@ namespace GFKConverter
             string julianDate = date.ToString("yy") + date.DayOfYear.ToString("000");
             txtInfo.Text = julianDate;
 
+            listFiles.ClearSelected();
+            for (int i = 0; i < listFiles.Items.Count; i++)
+            {
+                string listFileName = listFiles.Items[i].ToString();
+                DateTime fileDate;
+                if (TryGetFileDate(listFileName, out fileDate) && fileDate.Date == date.Date)
+                    listFiles.SetSelected(i, true);
+            }
+
             string fileExtension = "0" + julianDate.Substring(0, 2);
             string fileName = "STAMDEF" + julianDate.Substring(julianDate.Length - 3) + "." + fileExtension;
             string fullPath = Path.Combine(Properties.Settings.Default.GFKFileDirectory, fileName);

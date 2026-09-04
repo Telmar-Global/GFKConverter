@@ -23,7 +23,7 @@ namespace GFKConverter
             else
             {
                 // should be a single file
-                // will supposrt multiple files
+                // will support multiple files
                 List<string > filesToProcess=new List<string>();
                 foreach(string fname in args)
                 {
