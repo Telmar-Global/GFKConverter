@@ -58,6 +58,19 @@ namespace GFKConverter
                 if (pinasFiles.Count > 0)
                     ConvertGFKViewing(pinasFiles, gffDirectory, domesticids);
 
+                string processedDirectory = Properties.Settings.Default.GFKProcessedDirectory;
+                if (!Directory.Exists(processedDirectory))
+                    Directory.CreateDirectory(processedDirectory);
+
+                string movePrefix = DateTime.Now.ToString("yyyyMMdd_HHmmss_");
+                foreach (string file in filestoProcess)
+                {
+                    string fileName = Path.GetFileName(file);
+                    string sourcePath = File.Exists(file) ? file : Path.Combine(gfkDirectory, fileName);
+                    string destPath = Path.Combine(processedDirectory, movePrefix + fileName);
+                    File.Move(sourcePath, destPath);
+                }
+
                 if (useGUI)
                     MessageBox.Show("Processing complete");
                 else
