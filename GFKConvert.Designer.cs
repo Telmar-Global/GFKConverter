@@ -273,9 +273,10 @@
             this.lbDates.FormattingEnabled = true;
             this.lbDates.Location = new System.Drawing.Point(12, 19);
             this.lbDates.Name = "lbDates";
+            this.lbDates.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
             this.lbDates.Size = new System.Drawing.Size(122, 173);
             this.lbDates.TabIndex = 0;
-            this.lbDates.Click += new System.EventHandler(this.lbDates_Click);
+            this.lbDates.SelectedIndexChanged += new System.EventHandler(this.lbDates_SelectedIndexChanged);
             // 
             // groupBox4
             // 

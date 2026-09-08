@@ -186,14 +186,32 @@ namespace GFKConverter
             catch { }
         }
 
-        private void SelectFilesForDate(DateTime date)
+        private List<DateTime> GetSelectedDates()
         {
+            List<DateTime> dates = new List<DateTime>();
+            foreach (object item in lbDates.SelectedItems)
+            {
+                DateTime date;
+                if (DateTime.TryParseExact(item.ToString(), "dd-MM-yyyy",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out date))
+                    dates.Add(date);
+            }
+            return dates;
+        }
+
+        private void SelectFilesForDates(List<DateTime> dates)
+        {
+            HashSet<DateTime> dateSet = new HashSet<DateTime>();
+            foreach (DateTime date in dates)
+                dateSet.Add(date.Date);
+
             listFiles.ClearSelected();
             for (int i = 0; i < listFiles.Items.Count; i++)
             {
                 string listFileName = listFiles.Items[i].ToString();
                 DateTime fileDate;
-                if (TryGetFileDate(listFileName, out fileDate) && fileDate.Date == date.Date)
+                if (TryGetFileDate(listFileName, out fileDate) && dateSet.Contains(fileDate.Date))
                     listFiles.SetSelected(i, true);
             }
         }
@@ -210,10 +228,28 @@ namespace GFKConverter
 
         private void cmdProcessToIntermediate_Click(object sender, EventArgs e)
         {
+            List<DateTime> selectedDates = GetSelectedDates();
+            if (selectedDates.Count > 1)
+            {
+                int failed = 0;
+                foreach (DateTime date in selectedDates)
+                {
+                    List<string> filesForDate;
+                    if (!TryGetFilesToProcessForDate(textGfkDir.Text, date, out filesForDate)
+                        || GFKBatchConverter.Convertfiles(filesForDate, false) != 0)
+                        failed++;
+                }
+                if (failed == 0)
+                    MessageBox.Show("Processing complete");
+                else
+                    MessageBox.Show("Processing finished with " + failed + " date(s) that failed.");
+                showAvailableFiles();
+                return;
+            }
+
             List<string> filesToProcess = GetSelectedFilesToProcess();
             GFKBatchConverter.Convertfiles(filesToProcess, true);
             showAvailableFiles();
-            return;
         }
 
         private void btnGFKProcessed_Click(object sender, EventArgs e)
@@ -244,21 +280,24 @@ namespace GFKConverter
             txtInfo.Text = "Hallo";
         }
 
-        private void lbDates_Click(object sender, EventArgs e)
+        private void lbDates_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (lbDates.SelectedItem == null)
+            List<DateTime> selectedDates = GetSelectedDates();
+            if (selectedDates.Count == 0)
                 return;
 
-            DateTime date;
-            if (!DateTime.TryParseExact(lbDates.SelectedItem.ToString(), "dd-MM-yyyy",
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out date))
-                return;
+            SelectFilesForDates(selectedDates);
 
+            if (selectedDates.Count > 1)
+            {
+                tvDemo.Nodes.Clear();
+                txtInfo.Text = selectedDates.Count + " dates selected";
+                return;
+            }
+
+            DateTime date = selectedDates[0];
             string julianDate = date.ToString("yy") + date.DayOfYear.ToString("000");
             txtInfo.Text = julianDate;
-
-            SelectFilesForDate(date);
 
             string fileExtension = "0" + julianDate.Substring(0, 2);
             string fileName = "STAMDEF" + julianDate.Substring(julianDate.Length - 3) + "." + fileExtension;

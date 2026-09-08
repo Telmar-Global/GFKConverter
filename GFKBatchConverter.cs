@@ -14,7 +14,7 @@ namespace GFKConverter
     {
         private static readonly string[] DateFormats = new string[]
         {
-            "yyyy.mm.dd"
+            "yyyy.MM.dd"
         };
 
         public static int Convertfiles(List<string> filestoProcess, bool useGUI)
@@ -249,7 +249,7 @@ namespace GFKConverter
                         string firstItem = fields[0].Trim().Replace("\"", "").PadLeft(8, '0');
                         if (fields.Length >= 23)
                         {
-                            string column23 = fields[22].Trim().Replace("\"", "").Trim();
+                            string column23 = fields[23].Trim().Replace("\"", "").Trim();
                             int column23Value;
                             if (int.TryParse(column23, NumberStyles.Integer, CultureInfo.InvariantCulture, out column23Value)
                                 && column23Value == domesticRef)
@@ -314,9 +314,9 @@ namespace GFKConverter
         private static HashSet<DemoControlInfo> ReadDemoControl()
         {
             HashSet<DemoControlInfo> demoControl = new HashSet<DemoControlInfo>();
-            string path = Path.Combine(Properties.Settings.Default.MapFiles, "DEMOCONTROL.DAT");
+            string path = Path.Combine(Properties.Settings.Default.GFFDirectory, "DEMOCONTROL.DAT");
             if (!File.Exists(path))
-                throw new FileNotFoundException("DEMOCONTROL.DAT file not found in directory " + Properties.Settings.Default.MapFiles);
+                throw new FileNotFoundException("DEMOCONTROL.DAT file not found in directory " + Properties.Settings.Default.GFFDirectory);
 
             string[] lines = File.ReadAllLines(path);
             foreach (string strline in lines)
