@@ -35,15 +35,9 @@
             this.btnGFKProcessed = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtGFKProcessed = new System.Windows.Forms.TextBox();
-            this.button4 = new System.Windows.Forms.Button();
-            this.label5 = new System.Windows.Forms.Label();
-            this.textWTDDir = new System.Windows.Forms.TextBox();
             this.button3 = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.textGFFDir = new System.Windows.Forms.TextBox();
-            this.button2 = new System.Windows.Forms.Button();
-            this.label3 = new System.Windows.Forms.Label();
-            this.textIntermediateDir = new System.Windows.Forms.TextBox();
             this.button1 = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.textGfkDir = new System.Windows.Forms.TextBox();
@@ -81,7 +75,7 @@
             // 
             // txtInfo
             // 
-            this.txtInfo.Location = new System.Drawing.Point(12, 410);
+            this.txtInfo.Location = new System.Drawing.Point(12, 354);
             this.txtInfo.Name = "txtInfo";
             this.txtInfo.Size = new System.Drawing.Size(523, 20);
             this.txtInfo.TabIndex = 9;
@@ -91,21 +85,15 @@
             this.groupBox1.Controls.Add(this.btnGFKProcessed);
             this.groupBox1.Controls.Add(this.label7);
             this.groupBox1.Controls.Add(this.txtGFKProcessed);
-            this.groupBox1.Controls.Add(this.button4);
-            this.groupBox1.Controls.Add(this.label5);
-            this.groupBox1.Controls.Add(this.textWTDDir);
             this.groupBox1.Controls.Add(this.button3);
             this.groupBox1.Controls.Add(this.label4);
             this.groupBox1.Controls.Add(this.textGFFDir);
-            this.groupBox1.Controls.Add(this.button2);
-            this.groupBox1.Controls.Add(this.label3);
-            this.groupBox1.Controls.Add(this.textIntermediateDir);
             this.groupBox1.Controls.Add(this.button1);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.textGfkDir);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(523, 178);
+            this.groupBox1.Size = new System.Drawing.Size(523, 118);
             this.groupBox1.TabIndex = 10;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Directories";
@@ -136,34 +124,9 @@
             this.txtGFKProcessed.Size = new System.Drawing.Size(361, 20);
             this.txtGFKProcessed.TabIndex = 27;
             // 
-            // button4
-            // 
-            this.button4.Location = new System.Drawing.Point(484, 141);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(28, 23);
-            this.button4.TabIndex = 26;
-            this.button4.Text = "...";
-            this.button4.UseVisualStyleBackColor = true;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(14, 141);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(54, 13);
-            this.label5.TabIndex = 25;
-            this.label5.Text = "WTDFiles";
-            // 
-            // textWTDDir
-            // 
-            this.textWTDDir.Location = new System.Drawing.Point(117, 141);
-            this.textWTDDir.Name = "textWTDDir";
-            this.textWTDDir.Size = new System.Drawing.Size(361, 20);
-            this.textWTDDir.TabIndex = 24;
-            // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(484, 115);
+            this.button3.Location = new System.Drawing.Point(484, 84);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(28, 23);
             this.button3.TabIndex = 23;
@@ -173,7 +136,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(14, 115);
+            this.label4.Location = new System.Drawing.Point(14, 84);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(48, 13);
             this.label4.TabIndex = 22;
@@ -181,35 +144,10 @@
             // 
             // textGFFDir
             // 
-            this.textGFFDir.Location = new System.Drawing.Point(117, 115);
+            this.textGFFDir.Location = new System.Drawing.Point(117, 84);
             this.textGFFDir.Name = "textGFFDir";
             this.textGFFDir.Size = new System.Drawing.Size(361, 20);
             this.textGFFDir.TabIndex = 21;
-            // 
-            // button2
-            // 
-            this.button2.Location = new System.Drawing.Point(484, 83);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(28, 23);
-            this.button2.TabIndex = 20;
-            this.button2.Text = "...";
-            this.button2.UseVisualStyleBackColor = true;
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(14, 83);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(81, 13);
-            this.label3.TabIndex = 19;
-            this.label3.Text = "Intermediate file";
-            // 
-            // textIntermediateDir
-            // 
-            this.textIntermediateDir.Location = new System.Drawing.Point(117, 83);
-            this.textIntermediateDir.Name = "textIntermediateDir";
-            this.textIntermediateDir.Size = new System.Drawing.Size(361, 20);
-            this.textIntermediateDir.TabIndex = 18;
             // 
             // button1
             // 
@@ -261,7 +199,7 @@
             // groupBox3
             // 
             this.groupBox3.Controls.Add(this.lbDates);
-            this.groupBox3.Location = new System.Drawing.Point(12, 196);
+            this.groupBox3.Location = new System.Drawing.Point(12, 140);
             this.groupBox3.Name = "groupBox3";
             this.groupBox3.Size = new System.Drawing.Size(146, 208);
             this.groupBox3.TabIndex = 12;
@@ -281,7 +219,7 @@
             // groupBox4
             // 
             this.groupBox4.Controls.Add(this.tvDemo);
-            this.groupBox4.Location = new System.Drawing.Point(164, 197);
+            this.groupBox4.Location = new System.Drawing.Point(164, 141);
             this.groupBox4.Name = "groupBox4";
             this.groupBox4.Size = new System.Drawing.Size(359, 206);
             this.groupBox4.TabIndex = 13;
@@ -300,7 +238,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(751, 440);
+            this.ClientSize = new System.Drawing.Size(751, 386);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
@@ -328,15 +266,9 @@
         private System.Windows.Forms.Button btnGFKProcessed;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.TextBox txtGFKProcessed;
-        private System.Windows.Forms.Button button4;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox textWTDDir;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox textGFFDir;
-        private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.TextBox textIntermediateDir;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox textGfkDir;
@@ -348,4 +280,3 @@
         private System.Windows.Forms.TreeView tvDemo;
     }
 }
-

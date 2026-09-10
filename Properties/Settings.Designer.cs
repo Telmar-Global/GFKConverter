@@ -34,15 +34,6 @@ namespace GFKConverter.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("E:\\GFKConverter\\Intermediate")]
-        public string InterMediateFileDirectory {
-            get {
-                return ((string)(this["InterMediateFileDirectory"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("E:\\GFKConverter\\GFF")]
         public string GFFDirectory {
             get {
@@ -52,28 +43,10 @@ namespace GFKConverter.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("E:\\GFKConverter\\WTD")]
-        public string WTDDirectory {
-            get {
-                return ((string)(this["WTDDirectory"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("E:\\GFKConverter\\GFKFiles\\Processed")]
         public string GFKProcessedDirectory {
             get {
                 return ((string)(this["GFKProcessedDirectory"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("65535")]
-        public int TotalScreenID {
-            get {
-                return ((int)(this["TotalScreenID"]));
             }
         }
         

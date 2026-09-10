@@ -1,10 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using System.IO;
 
@@ -17,9 +12,7 @@ namespace GFKConverter
             InitializeComponent();
             textGfkDir.Text  = Properties.Settings.Default.GFKFileDirectory;
             txtGFKProcessed.Text=Properties.Settings.Default.GFKProcessedDirectory;
-            textIntermediateDir.Text = Properties.Settings.Default.InterMediateFileDirectory;
             textGFFDir.Text = Properties.Settings.Default.GFFDirectory;
-            textWTDDir.Text = Properties.Settings.Default.WTDDirectory;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -46,20 +39,6 @@ namespace GFKConverter
             return "";
         }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Seetings cannot be changed here, please edit config file manually");
-
-            //string newdir = ChangeDirectory(Properties.Settings.Default.InterMediateFileDirectory , textIntermediateDir , "Select directory for intermediate GFF files");
-            //if (!String.IsNullOrEmpty(newdir))
-            //{
-            //    Properties.Settings.Default.InterMediateFileDirectory  = newdir;
-            //    Properties.Settings.Default.Save();
-                
-            //}
-
-        }
-
         private void button3_Click(object sender, EventArgs e)
         {
             MessageBox.Show("Seetings cannot be changed here, please edit config file manually");
@@ -68,20 +47,6 @@ namespace GFKConverter
             //if (!String.IsNullOrEmpty(newdir))
             //{
             //    Properties.Settings.Default.GFFDirectory  = newdir;
-            //    Properties.Settings.Default.Save();
-
-            //}
-
-        }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Seetings cannot be changed here, please edit config file manually");
-
-            //string newdir = ChangeDirectory(Properties.Settings.Default.WTDDirectory ,textWTDDir , "Select directory for WTD files");
-            //if (!String.IsNullOrEmpty(newdir))
-            //{
-            //    Properties.Settings.Default.WTDDirectory  = newdir;
             //    Properties.Settings.Default.Save();
 
             //}
@@ -98,32 +63,6 @@ namespace GFKConverter
             showAvailableFiles();
         }
 
-        private static bool TryGetFileDate(string fileName, out DateTime fileDate)
-        {
-            fileDate = DateTime.MinValue;
-            string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-            string extension = Path.GetExtension(fileName).TrimStart('.');
-            if (nameWithoutExt.Length >= 3)
-            {
-                int julianDay;
-                int year;
-                if (int.TryParse(nameWithoutExt.Substring(nameWithoutExt.Length - 3), out julianDay)
-                    && int.TryParse(extension, out year))
-                {
-                    if (year < 100)
-                        year += (year < 50) ? 2000 : 1900;
-                    try
-                    {
-                        fileDate = new DateTime(year, 1, 1).AddDays(julianDay - 1);
-                        if (fileDate.Year == year)
-                            return true;
-                    }
-                    catch { }
-                }
-            }
-            return false;
-        }
-
         private static void CollectAvailableFiles(string directory, out List<string> fileNames, out List<DateTime> dates)
         {
             fileNames = new List<string>();
@@ -133,7 +72,7 @@ namespace GFKConverter
                 string fileName = Path.GetFileName(path);
                 fileNames.Add(fileName);
                 DateTime fileDate;
-                if (TryGetFileDate(fileName, out fileDate))
+                if (GFKBatchConverter.TryParseJulianFileDate(fileName, out fileDate))
                     dateSet.Add(fileDate.Date);
             }
             dates = new List<DateTime>(dateSet);
@@ -163,7 +102,7 @@ namespace GFKConverter
             foreach (string fileName in fileNames)
             {
                 DateTime fileDate;
-                if (TryGetFileDate(fileName, out fileDate) && fileDate.Date == date.Date)
+                if (GFKBatchConverter.TryParseJulianFileDate(fileName, out fileDate) && fileDate.Date == date.Date)
                     filesToProcess.Add(Path.Combine(gfkDirectory, fileName));
             }
             return true;
@@ -211,7 +150,7 @@ namespace GFKConverter
             {
                 string listFileName = listFiles.Items[i].ToString();
                 DateTime fileDate;
-                if (TryGetFileDate(listFileName, out fileDate) && dateSet.Contains(fileDate.Date))
+                if (GFKBatchConverter.TryParseJulianFileDate(listFileName, out fileDate) && dateSet.Contains(fileDate.Date))
                     listFiles.SetSelected(i, true);
             }
         }

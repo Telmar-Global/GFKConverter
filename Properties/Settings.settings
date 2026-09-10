@@ -5,20 +5,11 @@
     <Setting Name="GFKFileDirectory" Type="System.String" Scope="Application">
       <Value Profile="(Default)">E:\GFKConverter\GFKFiles</Value>
     </Setting>
-    <Setting Name="InterMediateFileDirectory" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">E:\GFKConverter\Intermediate</Value>
-    </Setting>
     <Setting Name="GFFDirectory" Type="System.String" Scope="Application">
       <Value Profile="(Default)">E:\GFKConverter\GFF</Value>
     </Setting>
-    <Setting Name="WTDDirectory" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">E:\GFKConverter\WTD</Value>
-    </Setting>
     <Setting Name="GFKProcessedDirectory" Type="System.String" Scope="Application">
       <Value Profile="(Default)">E:\GFKConverter\GFKFiles\Processed</Value>
-    </Setting>
-    <Setting Name="TotalScreenID" Type="System.Int32" Scope="Application">
-      <Value Profile="(Default)">65535</Value>
     </Setting>
     <Setting Name="MapFiles" Type="System.String" Scope="Application">
       <Value Profile="(Default)">E:\GFKConverter\MapFiles</Value>

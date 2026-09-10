@@ -4,9 +4,6 @@ using System.Globalization;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
-using System.Net.NetworkInformation;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace GFKConverter
 {
@@ -121,6 +118,7 @@ namespace GFKConverter
         private static void ConvertGFKViewing(List<string> pinasFiles, string gffDirectory, List<string> domesticids)
         {
             Dictionary<int, string> stationMap = ReadStationMap();
+            HashSet<string> unknownStations = new HashSet<string>();
             foreach (string pinasFile in pinasFiles)
             {
                 DateTime fileDate = ParseJulianFileDate(pinasFile);
@@ -151,12 +149,20 @@ namespace GFKConverter
                         string mappedStation;
                         if (int.TryParse(stationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out stationKey)
                             && stationMap.TryGetValue(stationKey, out mappedStation))
+                        {
                             station = mappedStation;
+                        }
+                        else if (unknownStations.Add(station))
+                        {
+                            Console.WriteLine("Station number " + station + " is not defined in GfKStats.txt");
+                        }
+
                         string starttime = fields[11].Trim().Replace("\"", "").PadLeft(8, '0');
                         starttime = starttime.Replace(":", "");
                         string duration = fields[12].Trim().Replace("\"", "").PadLeft(5, '0');
                         string outofhome = fields[19].Trim().Replace("\"", "");
                         //Now some logic about the flags
+                        char[] TSVflags = "0000".ToCharArray();
                         char[] viewflags = "0000000000000000".ToCharArray();
                         // Flag 1 - Normal viewing on Broadcast station
                         viewflags[0] = '1';
@@ -170,10 +176,15 @@ namespace GFKConverter
                         {
                             viewflags[2] = '1';
                         }
-                        // Time shidted viewing is when the record has a playback date.
+                        // Time shifted viewing is when the record has a playback date.
                         // Flag 4 - Set for normal viewing playbackdate = date
                         if (hasplaybackdate)
                         {
+                            TimeSpan difference = usagedate - progdate;
+                            int totalDays = (int)difference.TotalDays + 1;
+                            string dayDigits = totalDays.ToString("00");
+                            TSVflags[0] = dayDigits[0];
+                            TSVflags[1] = dayDigits[1];
                             // Viewed on same day as aired
                             if (fields[1] == fields[2]) 
                             {
@@ -181,8 +192,6 @@ namespace GFKConverter
                             }
                             else
                             {
-                                TimeSpan difference = usagedate - progdate;
-                                double totalDays = difference.TotalDays;
                                 // Flag 5 - Normal viewing + 1 = (( Playbackdate - Date ) <= 7 )
                                 if (totalDays <= 7)
                                 {
@@ -196,13 +205,14 @@ namespace GFKConverter
                                 }
                             }
                         }
-                            // Flag 13 - Set if non broadcast station
-                            string flags = new string(viewflags);
+                        // Flag 13 - Set if non broadcast station
+                        string flags = new string(viewflags);
+                        string tsvFlags = new string(TSVflags);
 
 
-                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + station + starttime + duration + "0000" + flags));
+                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + station + starttime + duration + tsvFlags + flags));
                         // And one more for total viewing Station 0
-                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + "0000" + starttime + duration + "0000" + flags));
+                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + "0000" + starttime + duration + tsvFlags + flags));
                     }
                 }
             }
@@ -404,8 +414,12 @@ namespace GFKConverter
             throw new InvalidDataException("Domestic worker not found in STAMDEF file: " + stamdefPath);
         }
 
-        private static DateTime ParseJulianFileDate(string filePath)
+        public static bool TryParseJulianFileDate(string filePath, out DateTime fileDate)
         {
+            fileDate = DateTime.MinValue;
+            if (string.IsNullOrEmpty(filePath))
+                return false;
+
             string fileName = Path.GetFileName(filePath);
             string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
             string extension = Path.GetExtension(fileName).TrimStart('.');
@@ -418,12 +432,27 @@ namespace GFKConverter
                 {
                     if (year < 100)
                         year += (year < 50) ? 2000 : 1900;
-                    DateTime fileDate = new DateTime(year, 1, 1).AddDays(julianDay - 1);
-                    if (fileDate.Year == year)
-                        return fileDate;
+                    try
+                    {
+                        fileDate = new DateTime(year, 1, 1).AddDays(julianDay - 1);
+                        if (fileDate.Year == year)
+                            return true;
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                    }
                 }
             }
-            throw new FormatException("Invalid Julian date in file name: " + fileName);
+            fileDate = DateTime.MinValue;
+            return false;
+        }
+
+        private static DateTime ParseJulianFileDate(string filePath)
+        {
+            DateTime fileDate;
+            if (TryParseJulianFileDate(filePath, out fileDate))
+                return fileDate;
+            throw new FormatException("Invalid Julian date in file name: " + Path.GetFileName(filePath));
         }
 
         private static DateTime ParseDate(string value)
