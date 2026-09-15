@@ -216,7 +216,7 @@ namespace GFKConverter
 
         private void listFiles_Click(object sender, EventArgs e)
         {
-            txtInfo.Text = "Hallo";
+            
         }
 
         private void lbDates_SelectedIndexChanged(object sender, EventArgs e)

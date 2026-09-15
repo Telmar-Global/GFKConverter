@@ -123,6 +123,8 @@ namespace GFKConverter
             {
                 DateTime fileDate = ParseJulianFileDate(pinasFile);
                 string outputPath = Path.Combine(gffDirectory, "V" + fileDate.ToString("yyyyMMdd") + ".DAT");
+                string statoutputPath = Path.Combine(gffDirectory, "stn" + fileDate.ToString("yyyyMMdd") + ".DAT");
+                Dictionary<string, string> uniqueStations = new Dictionary<string, string>();
                 using (StreamWriter sw = new StreamWriter(outputPath))
                 {
                     string[] lines = File.ReadAllLines(pinasFile);
@@ -157,6 +159,10 @@ namespace GFKConverter
                             Console.WriteLine("Station number " + station + " is not defined in GfKStats.txt");
                         }
 
+                        string stnname = fields.Length > 9 ? fields[9].Trim().Replace("\"", "") : "";
+                        if (!uniqueStations.ContainsKey(station))
+                            uniqueStations.Add(station, stnname);
+
                         string starttime = fields[11].Trim().Replace("\"", "").PadLeft(8, '0');
                         starttime = starttime.Replace(":", "");
                         string duration = fields[12].Trim().Replace("\"", "").PadLeft(5, '0');
@@ -165,7 +171,7 @@ namespace GFKConverter
                         char[] TSVflags = "0000".ToCharArray();
                         char[] viewflags = "0000000000000000".ToCharArray();
                         // Flag 1 - Normal viewing on Broadcast station
-                        viewflags[0] = '1';
+                        viewflags[0] = '0';
                         // Flag 2 - Set if Guest
                         if (outofhome != "0")
                         {
@@ -213,6 +219,18 @@ namespace GFKConverter
                         sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + station + starttime + duration + tsvFlags + flags));
                         // And one more for total viewing Station 0
                         sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + "0000" + starttime + duration + tsvFlags + flags));
+                    }
+                }
+
+                using (StreamWriter stnsw = new StreamWriter(statoutputPath))
+                {
+                    foreach (KeyValuePair<string, string> pair in uniqueStations)
+                    {
+                        string stn = pair.Key.TrimStart('0');
+                        if (stn.Length == 0)
+                            stn = "0";
+                        string stnname = pair.Value;
+                        stnsw.WriteLine("{0}\t{1}", stn, stnname + " " + stn.ToString());
                     }
                 }
             }
