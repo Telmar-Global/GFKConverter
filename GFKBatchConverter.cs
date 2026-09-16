@@ -46,6 +46,16 @@ namespace GFKConverter
                     return -1;
                 }
 
+                string viewerError = ValidateViewersHaveWeightAndDemo(pinasFiles, gewFiles, stamFiles);
+                if (viewerError != null)
+                {
+                    if (useGUI)
+                        MessageBox.Show(viewerError);
+                    else
+                        Console.WriteLine(viewerError);
+                    return -1;
+                }
+
                 if (gewFiles.Count > 0)
                     ConvertGFKWeights(gewFiles, gffDirectory);
 
@@ -83,6 +93,99 @@ namespace GFKConverter
             }
 
             return 0;
+        }
+
+        private static string ValidateViewersHaveWeightAndDemo(List<string> pinasFiles, List<string> gewFiles, List<string> stamFiles)
+        {
+            if (pinasFiles.Count == 0)
+                return null;
+
+            Dictionary<DateTime, HashSet<string>> gewIdsByDate = LoadNormalizedIdsByDate(gewFiles, 1);
+            Dictionary<DateTime, HashSet<string>> stamIdsByDate = LoadNormalizedIdsByDate(stamFiles, 0);
+
+            foreach (string pinasFile in pinasFiles)
+            {
+                DateTime fileDate;
+                if (!TryParseJulianFileDate(pinasFile, out fileDate))
+                    continue;
+
+                HashSet<string> gewIds;
+                if (!gewIdsByDate.TryGetValue(fileDate.Date, out gewIds))
+                    gewIds = new HashSet<string>();
+
+                HashSet<string> stamIds;
+                if (!stamIdsByDate.TryGetValue(fileDate.Date, out stamIds))
+                    stamIds = new HashSet<string>();
+
+                List<string> viewers = ReadUniqueViewerNumbers(pinasFile, 4);
+                foreach (string viewer in viewers)
+                {
+                    if (!gewIds.Contains(viewer) || !stamIds.Contains(viewer))
+                        return "No weight or demographic defined for the viewer " + viewer;
+                }
+            }
+
+            return null;
+        }
+
+        private static Dictionary<DateTime, HashSet<string>> LoadNormalizedIdsByDate(List<string> files, int columnIndex)
+        {
+            Dictionary<DateTime, HashSet<string>> idsByDate = new Dictionary<DateTime, HashSet<string>>();
+            foreach (string file in files)
+            {
+                DateTime fileDate;
+                if (!TryParseJulianFileDate(file, out fileDate))
+                    continue;
+
+                DateTime key = fileDate.Date;
+                HashSet<string> ids;
+                if (!idsByDate.TryGetValue(key, out ids))
+                {
+                    ids = new HashSet<string>();
+                    idsByDate.Add(key, ids);
+                }
+                AddNormalizedIdsFromColumn(file, columnIndex, ids);
+            }
+            return idsByDate;
+        }
+
+        private static List<string> ReadUniqueViewerNumbers(string filePath, int columnIndex)
+        {
+            List<string> uniqueIds = new List<string>();
+            HashSet<string> seen = new HashSet<string>();
+            AddNormalizedIdsFromColumn(filePath, columnIndex, seen, uniqueIds);
+            return uniqueIds;
+        }
+
+        private static void AddNormalizedIdsFromColumn(string filePath, int columnIndex, HashSet<string> ids)
+        {
+            AddNormalizedIdsFromColumn(filePath, columnIndex, ids, null);
+        }
+
+        private static void AddNormalizedIdsFromColumn(string filePath, int columnIndex, HashSet<string> ids, List<string> orderedIds)
+        {
+            if (!File.Exists(filePath))
+                return;
+
+            string[] lines = File.ReadAllLines(filePath);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string line = lines[i].Trim();
+                if (line.Length == 0)
+                    continue;
+
+                string[] fields = line.Split(';');
+                if (fields.Length <= columnIndex)
+                    continue;
+
+                string id = fields[columnIndex].Trim().Replace("\"", "");
+                if (id.Length == 0)
+                    continue;
+
+                id = id.PadLeft(8, '0');
+                if (ids.Add(id) && orderedIds != null)
+                    orderedIds.Add(id);
+            }
         }
 
         private static void ConvertGFKWeights(List<string> gewFiles, string gffDirectory)
@@ -141,9 +244,18 @@ namespace GFKConverter
                         DateTime progdate = ParseDate(fields[1].Trim());
                         DateTime usagedate = ParseDate(fields[2].Trim());
                         bool hasplaybackdate = (fields[14].Trim() != "");
+                        if (hasplaybackdate)
+                        {
+                            usagedate = ParseDate(fields[14].Trim());
+                        }
 
                         string HHID = fields[4].Trim().Replace("\"", "").PadLeft(8, '0');
                         string stationRaw = fields[10].Trim().Replace("\"", "");
+                        int stationRawValue;
+                        if (int.TryParse(stationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out stationRawValue)
+                            && stationRawValue == 0)
+                            continue;
+
                         string station = stationRaw.PadLeft(4, '0');
                         if (station.Length > 4)
                             station = station.Substring(station.Length - 4);
@@ -164,6 +276,10 @@ namespace GFKConverter
                             uniqueStations.Add(station, stnname);
 
                         string starttime = fields[11].Trim().Replace("\"", "").PadLeft(8, '0');
+                        if (starttime.StartsWith("00"))
+                            starttime = "24" + starttime.Substring(2);
+                        else if (starttime.StartsWith("01"))
+                            starttime = "25" + starttime.Substring(2);
                         starttime = starttime.Replace(":", "");
                         string duration = fields[12].Trim().Replace("\"", "").PadLeft(5, '0');
                         string outofhome = fields[19].Trim().Replace("\"", "");
