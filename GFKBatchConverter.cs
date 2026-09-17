@@ -46,24 +46,29 @@ namespace GFKConverter
                     return -1;
                 }
 
-                string viewerError = ValidateViewersHaveWeightAndDemo(pinasFiles, gewFiles, stamFiles);
-                if (viewerError != null)
+                HashSet<string> gewNumbers;
+                string gewDemoError = ValidateGewNumbersHaveDemos(gewFiles, stamFiles, out gewNumbers);
+                if (gewDemoError != null)
                 {
                     if (useGUI)
-                        MessageBox.Show(viewerError);
+                        MessageBox.Show(gewDemoError);
                     else
-                        Console.WriteLine(viewerError);
+                        Console.WriteLine(gewDemoError);
                     return -1;
                 }
+
+                
 
                 if (gewFiles.Count > 0)
                     ConvertGFKWeights(gewFiles, gffDirectory);
 
                 List<string> domesticids = new List<string>();
                 if (stamFiles.Count > 0)
-                    domesticids = ConvertGFKDemos(stamFiles, gffDirectory);
+                    domesticids = ConvertGFKDemos(stamFiles, gffDirectory, gewNumbers);
+
+                HashSet<string> missingGewViewers = ValidateViewersHaveWeightAndDemo(pinasFiles, gewFiles);
                 if (pinasFiles.Count > 0)
-                    ConvertGFKViewing(pinasFiles, gffDirectory, domesticids);
+                    ConvertGFKViewing(pinasFiles, gffDirectory, domesticids, missingGewViewers);
 
                 string processedDirectory = Properties.Settings.Default.GFKProcessedDirectory;
                 if (!Directory.Exists(processedDirectory))
@@ -95,13 +100,39 @@ namespace GFKConverter
             return 0;
         }
 
-        private static string ValidateViewersHaveWeightAndDemo(List<string> pinasFiles, List<string> gewFiles, List<string> stamFiles)
+        private static string ValidateGewNumbersHaveDemos(List<string> gewFiles, List<string> stamFiles, out HashSet<string> gewNumbers)
         {
-            if (pinasFiles.Count == 0)
+            gewNumbers = new HashSet<string>();
+            if (gewFiles.Count == 0)
                 return null;
 
             Dictionary<DateTime, HashSet<string>> gewIdsByDate = LoadNormalizedIdsByDate(gewFiles, 1);
             Dictionary<DateTime, HashSet<string>> stamIdsByDate = LoadNormalizedIdsByDate(stamFiles, 0);
+
+            foreach (KeyValuePair<DateTime, HashSet<string>> gewEntry in gewIdsByDate)
+            {
+                HashSet<string> stamIds;
+                if (!stamIdsByDate.TryGetValue(gewEntry.Key, out stamIds))
+                    stamIds = new HashSet<string>();
+
+                foreach (string id in gewEntry.Value)
+                {
+                    gewNumbers.Add(id);
+                    if (!stamIds.Contains(id))
+                        return "There are no demographics defined for " + id;
+                }
+            }
+
+            return null;
+        }
+
+        private static HashSet<string> ValidateViewersHaveWeightAndDemo(List<string> pinasFiles, List<string> gewFiles)
+        {
+            HashSet<string> missingGewViewers = new HashSet<string>();
+            if (pinasFiles.Count == 0)
+                return missingGewViewers;
+
+            Dictionary<DateTime, HashSet<string>> gewIdsByDate = LoadNormalizedIdsByDate(gewFiles, 1);
 
             foreach (string pinasFile in pinasFiles)
             {
@@ -113,19 +144,15 @@ namespace GFKConverter
                 if (!gewIdsByDate.TryGetValue(fileDate.Date, out gewIds))
                     gewIds = new HashSet<string>();
 
-                HashSet<string> stamIds;
-                if (!stamIdsByDate.TryGetValue(fileDate.Date, out stamIds))
-                    stamIds = new HashSet<string>();
-
                 List<string> viewers = ReadUniqueViewerNumbers(pinasFile, 4);
                 foreach (string viewer in viewers)
                 {
-                    if (!gewIds.Contains(viewer) || !stamIds.Contains(viewer))
-                        return "No weight or demographic defined for the viewer " + viewer;
+                    if (!gewIds.Contains(viewer))
+                        missingGewViewers.Add(viewer);
                 }
             }
 
-            return null;
+            return missingGewViewers;
         }
 
         private static Dictionary<DateTime, HashSet<string>> LoadNormalizedIdsByDate(List<string> files, int columnIndex)
@@ -218,7 +245,7 @@ namespace GFKConverter
             }
         }
 
-        private static void ConvertGFKViewing(List<string> pinasFiles, string gffDirectory, List<string> domesticids)
+        private static void ConvertGFKViewing(List<string> pinasFiles, string gffDirectory, List<string> domesticids, HashSet<string> missingGewViewers)
         {
             Dictionary<int, string> stationMap = ReadStationMap();
             HashSet<string> unknownStations = new HashSet<string>();
@@ -250,6 +277,9 @@ namespace GFKConverter
                         }
 
                         string HHID = fields[4].Trim().Replace("\"", "").PadLeft(8, '0');
+                        if (missingGewViewers.Contains(HHID))
+                            continue;
+
                         string stationRaw = fields[10].Trim().Replace("\"", "");
                         int stationRawValue;
                         if (int.TryParse(stationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out stationRawValue)
@@ -359,7 +389,7 @@ namespace GFKConverter
             public int FlagPadding;
         }
 
-        private static List<string> ConvertGFKDemos(List<string> stamFiles, string gffDirectory)
+        private static List<string> ConvertGFKDemos(List<string> stamFiles, string gffDirectory, HashSet<string> gewNumbers)
         {
             List<string> domesticids = new List<string>();
             HashSet<DemoControlInfo> DemoControl = ReadDemoControl();
@@ -391,6 +421,9 @@ namespace GFKConverter
                             continue;
 
                         string firstItem = fields[0].Trim().Replace("\"", "").PadLeft(8, '0');
+                        if (!gewNumbers.Contains(firstItem))
+                            continue;
+
                         if (fields.Length >= 23)
                         {
                             string column23 = fields[23].Trim().Replace("\"", "").Trim();
