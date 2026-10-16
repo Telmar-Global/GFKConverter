@@ -219,6 +219,7 @@ namespace GFKConverter
         {
             foreach (string gewFile in gewFiles)
             {
+                Console.WriteLine("Converting " + Path.GetFileName(gewFile));
                 DateTime fileDate = ParseJulianFileDate(gewFile);
                 string outputPath = Path.Combine(gffDirectory, "W" + fileDate.ToString("yyyyMMdd") + ".DAT");
                 using (StreamWriter sw = new StreamWriter(outputPath))
@@ -237,8 +238,10 @@ namespace GFKConverter
                         DateTime date = ParseDate(fields[0].Trim());
                         string person = fields[1].Trim();
                         person = person.Replace("\"", "").PadLeft(8, '0');
-                        string weight = fields[2].Trim();
-                        weight = weight.Replace("\"", "").PadLeft(10, '0');
+                        string weight = fields[2].Trim().Replace("\"", "");
+                        decimal weightValue = decimal.Parse(weight, NumberStyles.Number, CultureInfo.InvariantCulture);
+                        weight = decimal.Truncate(weightValue * 10000m).ToString("0", CultureInfo.InvariantCulture);
+                        weight = weight.PadLeft(10, '0');
                         sw.WriteLine(date.ToString("yyyyMMdd") + person + "00100000" + weight);
                     }
                 }
@@ -251,6 +254,7 @@ namespace GFKConverter
             HashSet<string> unknownStations = new HashSet<string>();
             foreach (string pinasFile in pinasFiles)
             {
+                Console.WriteLine("Converting " + Path.GetFileName(pinasFile));
                 DateTime fileDate = ParseJulianFileDate(pinasFile);
                 string outputPath = Path.Combine(gffDirectory, "V" + fileDate.ToString("yyyyMMdd") + ".DAT");
                 string statoutputPath = Path.Combine(gffDirectory, "stn" + fileDate.ToString("yyyyMMdd") + ".DAT");
@@ -258,6 +262,17 @@ namespace GFKConverter
                 using (StreamWriter sw = new StreamWriter(outputPath))
                 {
                     string[] lines = File.ReadAllLines(pinasFile);
+                    if (lines.Length == 0)
+                        continue;
+
+                    string[] headings = lines[0].Split(';');
+                    int guestViewingColumn = FindHeadingColumn(headings, "Guest Viewing");
+                    int vodPlatformColumn = FindHeadingColumn(headings, "VOD-Platform");
+                    if (guestViewingColumn < 0)
+                        throw new Exception("Column \"Guest Viewing\" was not found in " + pinasFile);
+                    if (vodPlatformColumn < 0)
+                        throw new Exception("Column \"VOD-Platform\" was not found in " + pinasFile);
+
                     for (int i = 1; i < lines.Length; i++)
                     {
                         string line = lines[i].Trim();
@@ -312,7 +327,8 @@ namespace GFKConverter
                             starttime = "25" + starttime.Substring(2);
                         starttime = starttime.Replace(":", "");
                         string duration = fields[12].Trim().Replace("\"", "").PadLeft(5, '0');
-                        string outofhome = fields[19].Trim().Replace("\"", "");
+                        string outofhome = fields[guestViewingColumn].Trim().Replace("\"", "");
+                        string vodPlatform = fields[vodPlatformColumn].Trim().Replace("\"", "");
                         //Now some logic about the flags
                         char[] TSVflags = "0000".ToCharArray();
                         char[] viewflags = "0000000000000000".ToCharArray();
@@ -357,7 +373,13 @@ namespace GFKConverter
                                 }
                             }
                         }
-                        // Flag 13 - Set if non broadcast station
+                        // Flag 13 - Set if VOD-Platform is greater than 0
+                        int vodPlatformValue;
+                        if (int.TryParse(vodPlatform, NumberStyles.Integer, CultureInfo.InvariantCulture, out vodPlatformValue)
+                            && vodPlatformValue > 0)
+                        {
+                            viewflags[12] = '1';
+                        }
                         string flags = new string(viewflags);
                         string tsvFlags = new string(TSVflags);
 
@@ -382,6 +404,17 @@ namespace GFKConverter
             }
         }
 
+        private static int FindHeadingColumn(string[] headings, string headingName)
+        {
+            for (int i = 0; i < headings.Length; i++)
+            {
+                string heading = headings[i].Trim().Replace("\"", "");
+                if (string.Equals(heading, headingName, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+            return -1;
+        }
+
         private class DemoControlInfo
         {
             public string Title;
@@ -395,6 +428,7 @@ namespace GFKConverter
             HashSet<DemoControlInfo> DemoControl = ReadDemoControl();
             foreach (string stamFile in stamFiles)
             {
+                Console.WriteLine("Converting " + Path.GetFileName(stamFile));
                 int domesticRef = ReadDomesticWorkerRef(stamFile);
                 DateTime fileDate = ParseJulianFileDate(stamFile);
                 string[] lines = File.ReadAllLines(stamFile);
