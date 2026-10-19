@@ -373,19 +373,19 @@ namespace GFKConverter
                                 }
                             }
                         }
+                        string flags = new string(viewflags);
+                        string tsvFlags = new string(TSVflags);
+                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + station + starttime + duration + tsvFlags + flags));
+                        // And one more for total viewing Station 0
                         // Flag 13 - Set if VOD-Platform is greater than 0
+                        // but only for the total line. 
                         int vodPlatformValue;
                         if (int.TryParse(vodPlatform, NumberStyles.Integer, CultureInfo.InvariantCulture, out vodPlatformValue)
                             && vodPlatformValue > 0)
                         {
                             viewflags[12] = '1';
+                            flags = new string(viewflags);
                         }
-                        string flags = new string(viewflags);
-                        string tsvFlags = new string(TSVflags);
-
-
-                        sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + station + starttime + duration + tsvFlags + flags));
-                        // And one more for total viewing Station 0
                         sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + "0000" + starttime + duration + tsvFlags + flags));
                     }
                 }
