@@ -296,6 +296,8 @@ namespace GFKConverter
                             continue;
 
                         string stationRaw = fields[10].Trim().Replace("\"", "");
+                        //Station 0 must be included now, but only the viewing session, not the Total
+                        //Now include again, becasue FLO file cannot handle big numbers 
                         int stationRawValue;
                         if (int.TryParse(stationRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out stationRawValue)
                             && stationRawValue == 0)
@@ -386,7 +388,9 @@ namespace GFKConverter
                             viewflags[12] = '1';
                             flags = new string(viewflags);
                         }
+                        //if (station != "0000") {
                         sw.WriteLine(progdate.ToString("yyyyMMdd" + HHID + "001" + "0000" + starttime + duration + tsvFlags + flags));
+                        
                     }
                 }
 
